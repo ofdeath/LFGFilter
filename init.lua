@@ -1,4 +1,4 @@
-local _, core = ...;
+local AddonName, core = ...;
 LFGListFrame.SearchPanel.idHook = 0;
 
 SLASH_RELOADUI1 = "/rl";
@@ -9,6 +9,47 @@ SlashCmdList["FRAMESTK"] = function()
 	LoadAddOn("Blizzard_DebugTools");
 	FrameStackTooltip_Toggle();
 end
+
+local L = {
+    ["TOP"] = "고통의 투기장",
+    ["HOA"] = "속죄의 전당",
+    ["SOA"] = "승천의 첨탑",
+    ["PF"] = "역병 몰락지",
+    ["DOS"] = "저편",
+    ["NW"] = "죽음의 상흔",
+    ["MOTS"] = "티르너 사이드의 안개",
+    ["SD"] = "핏빛 심연",
+};
+local L2 = {
+    ["TOP"] = "고투",
+    ["HOA"] = "속죄",
+    ["SOA"] = "승천",
+    ["PF"] = "역병",
+    ["DOS"] = "저편",
+    ["NW"] = "죽상",
+    ["MOTS"] = "안개",
+    ["SD"] = "심연",
+};
+local dungeonPatterns = {
+    ["TOP"] = {"고통", "투기", "고투"},
+    ["HOA"] = {"속죄"},
+    ["SOA"] = {"승천"},
+    ["PF"] = {"역병"},
+    ["DOS"] = {"저편"},
+    ["NW"] = {"상흔", "죽상"},
+    ["MOTS"] = {"티르", "안개"},
+    ["SD"] = {"핏빛", "심연"},
+};
+local dungeonIDs = {
+    ["TOP"] = {716, 719, 718, 717},  -- Theater of Pain
+    ["HOA"] = {696, 697, 698, 699},  -- Halls of Atonement
+    ["SOA"] = {708, 711, 710, 709},  -- Spires of Ascension
+    ["PF"] = {688, 689, 690, 691},  -- Plaguefall
+    ["DOS"] = {692, 693, 694, 695},  -- De Other Side
+    ["NW"] = {712, 715, 714, 713},  -- The Necrotic Wake
+    ["MOTS"] = {700, 701, 702, 703},  -- Mists of Tirna Scithe
+    ["SD"] = {704, 707, 706, 705},  -- Sanguine Depths
+};
 
 for i = 1, NUM_CHAT_WINDOWS do
 	_G["ChatFrame"..i.."EditBox"]:SetAltArrowKeyMode(false)
@@ -145,7 +186,7 @@ end
 
 function init(self, event, arg1)
 
-	if (event == "ADDON_LOADED" and arg1 == "LFGFilter" ) then
+	if (event == "ADDON_LOADED" and arg1 == AddonName ) then
 		local function initDB(db, ...)
 			local defaults = ...;
 			if type(db) ~= "table" then db = {} end
@@ -166,6 +207,21 @@ function init(self, event, arg1)
 	end	
 
 	if (event == "PLAYER_LOGIN") then
+        local function OnEnter(self, motion)
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            if self.tooltipTitle ~= nil then
+                GameTooltip:SetText(self.tooltipTitle)
+            elseif self:GetText() ~= nil then
+                GameTooltip:SetText(self:GetText())
+            end
+            GameTooltip:AddLine(tostring(self.tooltipText), 1, 1, 1)
+            GameTooltip:Show()
+        end
+
+        local function OnLeave(self, motion)
+            GameTooltip:Hide()
+        end
+
 		local function CreateButton(relativeFrame, typebutton, text, role, name, xPoint, yPoint)
 	
 			local isEnabled = LFGFilterSettings[name] or false;
@@ -178,7 +234,7 @@ function init(self, event, arg1)
 				self.Middle:SetTexture(texture);
 				self.Right:SetTexture(texture);
 			end
-			
+
 			local function setButton(btn, enabled, fromScript)
 				if (fromScript == true) then btn.enabled = not btn.enabled; else btn.enabled = enabled; end				
 				if (btn.enabled == true) then				
@@ -187,9 +243,13 @@ function init(self, event, arg1)
 						if (LFGListFrame.SearchPanel.filter[role] < 3) then
 							LFGListFrame.SearchPanel.filter[role] = LFGListFrame.SearchPanel.filter[role] + 1;
 						end
-					else
+                    elseif (typebutton == "Include") then
 						if (LFGListFrame.SearchPanel.include[role] < 3) then
 							LFGListFrame.SearchPanel.include[role] = LFGListFrame.SearchPanel.include[role] + 1;
+						end
+                    else
+						if (LFGListFrame.SearchPanel.dungeon[role] < 1) then
+							LFGListFrame.SearchPanel.dungeon[role] = LFGListFrame.SearchPanel.dungeon[role] + 1;
 						end
 					end
 				else	
@@ -199,9 +259,13 @@ function init(self, event, arg1)
 							if (LFGListFrame.SearchPanel.filter[role] > 0) then
 								LFGListFrame.SearchPanel.filter[role] = LFGListFrame.SearchPanel.filter[role] - 1;
 							end
-						else
+						elseif (typebutton == "Include") then
 							if (LFGListFrame.SearchPanel.include[role] > 0) then
 								LFGListFrame.SearchPanel.include[role] = LFGListFrame.SearchPanel.include[role] - 1;
+							end
+                        else
+							if (LFGListFrame.SearchPanel.dungeon[role] > 0) then
+								LFGListFrame.SearchPanel.dungeon[role] = LFGListFrame.SearchPanel.dungeon[role] - 1;
 							end
 						end
 					end
@@ -215,11 +279,26 @@ function init(self, event, arg1)
 					LFGListFrame.SearchPanel.includeTankCount = LFGListFrame.SearchPanel.include["TANK"];
 					LFGListFrame.SearchPanel.includeHealerCount = LFGListFrame.SearchPanel.include["HEALER"];
 					LFGListFrame.SearchPanel.includeDamagerCount = LFGListFrame.SearchPanel.include["DAMAGER"];			
+                else
+                    local includeDungeons = {}
+                    local includeDungeonCount = 0
+                    for k,v in pairs(LFGListFrame.SearchPanel.dungeon) do
+                        if v > 0 then
+                            includeDungeons[k] = v
+					        includeDungeonCount = includeDungeonCount + 1
+                        end
+                    end
+                    LFGListFrame.SearchPanel.includeDungeons = includeDungeons
+					LFGListFrame.SearchPanel.includeDungeonCount = includeDungeonCount
 				end
 			end
 			
 			button:SetPoint("LEFT", relativeFrame, "LEFT", xPoint, yPoint);
-			button:SetSize(20, 20);
+            if (typebutton == "Dungeon") then
+			    button:SetSize(40, 20);
+            else
+			    button:SetSize(20, 20);
+            end
 			button:SetText(text);
 			button:SetNormalFontObject("GameFontNormalSmall");
 			button:SetHighlightFontObject("GameFontHighlightSmall");			
@@ -229,15 +308,28 @@ function init(self, event, arg1)
 				LFGFilterSettings[name] = self.enabled;
 			end);		
 			
-			setButton(button, isEnabled, false);		
+            if (typebutton == "Filter") then
+                button.tooltipTitle = "Exclude role";
+                button.tooltipText = role;
+            elseif (typebutton == "Include") then
+                button.tooltipTitle = "Include role";
+                button.tooltipText = role;
+            else
+                button.tooltipText = L[role]
+            end
+            button:SetScript("OnEnter", OnEnter);
+            button:SetScript("OnLeave", OnLeave);
+
+			setButton(button, isEnabled, false);
 		
 			return button;
 		end
 		
 		local DF = CreateFrame("Frame", "DF_Frame", LFGListFrame.SearchPanel, "InsetFrameTemplate3");
 		
-		DF:SetSize(160, 120);
-		DF:SetPoint("BOTTOMRIGHT", LFGListFrame.SearchPanel, "BOTTOMRIGHT", 0, -130);
+		DF:SetSize(160, 120 + 50);
+		--DF:SetPoint("BOTTOMRIGHT", LFGListFrame.SearchPanel, "BOTTOMRIGHT", 0, -130 - 80);
+		DF:SetPoint("BOTTOMLEFT", LFGListFrame.SearchPanel, "BOTTOMRIGHT", 2, 0);
 		DF:SetMovable(true);
 		DF:EnableMouse(true);
 		DF:RegisterForDrag("LeftButton")
@@ -255,6 +347,17 @@ function init(self, event, arg1)
 			["HEALER"] = 0,
 			["DAMAGER"] = 0
 		};
+
+        LFGListFrame.SearchPanel.dungeon = {
+            ["TOP"] = 0,
+            ["HOA"] = 0,
+            ["SOA"] = 0,
+            ["PF"] = 0,
+            ["DOS"] = 0,
+            ["NW"] = 0,
+            ["MOTS"] = 0,
+            ["SD"] = 0,
+        };
 		
 		LFGListFrame.SearchPanel.filterTankCount = 0
 		LFGListFrame.SearchPanel.filterHealerCount = 0
@@ -262,25 +365,38 @@ function init(self, event, arg1)
 		LFGListFrame.SearchPanel.includeTankCount = 0
 		LFGListFrame.SearchPanel.includeHealerCount = 0
 		LFGListFrame.SearchPanel.includeDamagerCount = 0
+        LFGListFrame.SearchPanel.includeDungeons = {}
+        LFGListFrame.SearchPanel.includeDungeonCount = 0
 
+        local dy = 30
+        local y = -25
 		DF.applyBtn = CreateFrame("Button", nil, DF, "GameMenuButtonTemplate");
-		DF.applyBtn:SetPoint("RIGHT", DF, "RIGHT", -10, -40);
+		DF.applyBtn:SetPoint("RIGHT", DF, "RIGHT", -5, -40 + y);
 		DF.applyBtn:SetSize(50, 20);
 		DF.applyBtn:SetText("Apply");
 		DF.applyBtn:SetNormalFontObject("GameFontNormalSmall");
 		DF.applyBtn:SetHighlightFontObject("GameFontHighlightSmall");	
 
-		DF.tankFilterBtn = CreateButton(DF, "Filter", "T", "TANK", "TankFilterButton", 10, 40);
-		DF.healerFilterBtn = CreateButton(DF, "Filter", "H", "HEALER", "HealerFilterButton",  40, 40);
-		DF.damager1FilterBtn = CreateButton(DF, "Filter", "D", "DAMAGER", "Damager1FilterButton", 70, 40);
-		DF.damager2FilterBtn = CreateButton(DF, "Filter", "D", "DAMAGER", "Damager2FilterButton", 100, 40);
-		DF.damager3FilterBtn = CreateButton(DF, "Filter", "D", "DAMAGER", "Damager3FilterButton", 130, 40);
+        DF.dungeonTOPBtn = CreateButton(DF, "Dungeon", L2["TOP"], "TOP", "DungeonTOPButton", 1, 35 + dy);
+        DF.dungeonHOABtn = CreateButton(DF, "Dungeon", L2["HOA"], "HOA", "DungeonHOAButton", 40, 35 + dy);
+        DF.dungeonSOABtn = CreateButton(DF, "Dungeon", L2["SOA"], "SOA", "DungeonSOAButton", 80, 35 + dy);
+        DF.dungeonPFBtn = CreateButton(DF, "Dungeon", L2["PF"], "PF", "DungeonPFButton", 119, 35 + dy);
+        DF.dungeonDOSBtn = CreateButton(DF, "Dungeon", L2["DOS"], "DOS", "DungeonDOSButton", 1, 10 + dy);
+        DF.dungeonNWBtn = CreateButton(DF, "Dungeon", L2["NW"], "NW", "DungeonNWButton", 40, 10 + dy);
+        DF.dungeonMOTSBtn = CreateButton(DF, "Dungeon", L2["MOTS"], "MOTS", "DungeonMOTSButton", 80, 10 + dy);
+        DF.dungeonSDBtn = CreateButton(DF, "Dungeon", L2["SD"], "SD", "DungeonSDButton", 119, 10 + dy);
 
-		DF.tankIncludeBtn = CreateButton(DF, "Include", "T", "TANK", "TankIncludeButton", 10, 10);	
-		DF.healerIncludeBtn = CreateButton(DF, "Include", "H", "HEALER", "HealerIncludeButton", 40, 10);
-		DF.damager1IncludeBtn = CreateButton(DF, "Include", "D", "DAMAGER", "Damager1IncludeButton", 70, 10);
-		DF.damager2IncludeBtn = CreateButton(DF, "Include", "D", "DAMAGER", "Damager2IncludeButton", 100, 10);
-		DF.damager3IncludeBtn = CreateButton(DF, "Include", "D", "DAMAGER", "Damager3IncludeButton", 130, 10);
+		DF.tankFilterBtn = CreateButton(DF, "Filter", "T", "TANK", "TankFilterButton", 10, 35 + y);
+		DF.healerFilterBtn = CreateButton(DF, "Filter", "H", "HEALER", "HealerFilterButton",  40, 35 + y);
+		DF.damager1FilterBtn = CreateButton(DF, "Filter", "D", "DAMAGER", "Damager1FilterButton", 70, 35 + y);
+		DF.damager2FilterBtn = CreateButton(DF, "Filter", "D", "DAMAGER", "Damager2FilterButton", 100, 35 + y);
+		DF.damager3FilterBtn = CreateButton(DF, "Filter", "D", "DAMAGER", "Damager3FilterButton", 130, 35 + y);
+
+		DF.tankIncludeBtn = CreateButton(DF, "Include", "T", "TANK", "TankIncludeButton", 10, 10 + y);
+		DF.healerIncludeBtn = CreateButton(DF, "Include", "H", "HEALER", "HealerIncludeButton", 40, 10 + y);
+		DF.damager1IncludeBtn = CreateButton(DF, "Include", "D", "DAMAGER", "Damager1IncludeButton", 70, 10 + y);
+		DF.damager2IncludeBtn = CreateButton(DF, "Include", "D", "DAMAGER", "Damager2IncludeButton", 100, 10 + y);
+		DF.damager3IncludeBtn = CreateButton(DF, "Include", "D", "DAMAGER", "Damager3IncludeButton", 130, 10 + y);
 
 		local function OnClickApply(self)
 			DF.maxRioEdit:ClearFocus();
@@ -303,10 +419,18 @@ function init(self, event, arg1)
 
 		DF.applyBtn:SetScript("OnClick", OnClickApply);	
 		
+		DF.Label = DF:CreateFontString(nil , "BORDER", "GameFontNormal");
+		DF.Label:SetJustifyH("CENTER");
+		DF.Label:SetPoint("LEFT", DF, "LEFT", 10, -15 + y);
+		DF.Label:SetText("RIO");
+		
 		DF.minRioEdit = CreateFrame("EditBox", nil, DF, "InputBoxInstructionsTemplate");
 		DF.minRioEdit:SetAutoFocus(false);
-		DF.minRioEdit:SetPoint("LEFT", DF, "LEFT", 40, -15);
+		DF.minRioEdit:SetPoint("LEFT", DF, "LEFT", 40, -15 + y);
 		DF.minRioEdit:SetSize(50, 20);
+        DF.minRioEdit.tooltipText = "Filter by Raider.IO rating";
+        DF.minRioEdit:SetScript("OnEnter", OnEnter);
+        DF.minRioEdit:SetScript("OnLeave", OnLeave);
 		
 		local minRioFromDB = LFGFilterSettings["minRioEdit"];
 		LFGListFrame.SearchPanel.minRio = minRioFromDB or -1;
@@ -321,15 +445,13 @@ function init(self, event, arg1)
 			LFGFilterSettings["minRioEdit"] = self:GetNumber();
 		end);
 		
-		DF.Label = DF:CreateFontString(nil , "BORDER", "GameFontNormal");
-		DF.Label:SetJustifyH("CENTER");
-		DF.Label:SetPoint("LEFT", DF, "LEFT", 10, -15);
-		DF.Label:SetText("RIO");
-		
 		DF.maxRioEdit = CreateFrame("EditBox", nil, DF, "InputBoxInstructionsTemplate");
 		DF.maxRioEdit:SetAutoFocus(false);
-		DF.maxRioEdit:SetPoint("LEFT", DF, "LEFT", 100, -15);
+		DF.maxRioEdit:SetPoint("LEFT", DF, "LEFT", 100, -15 + y);
 		DF.maxRioEdit:SetSize(50, 20);
+        DF.maxRioEdit.tooltipText = "Filter by Raider.IO rating";
+        DF.maxRioEdit:SetScript("OnEnter", OnEnter);
+        DF.maxRioEdit:SetScript("OnLeave", OnLeave);
 		
 		local maxRioFromDB = LFGFilterSettings["maxRioEdit"];		
 		LFGListFrame.SearchPanel.maxRio = maxRioFromDB or 9999;
@@ -345,7 +467,7 @@ function init(self, event, arg1)
 		end);		
 		
 		DF.showRIO = CreateFrame("CheckButton", nil, DF, "UICheckButtonTemplate");
-		DF.showRIO:SetPoint("LEFT", DF, "LEFT", 10, -40);
+		DF.showRIO:SetPoint("LEFT", DF, "LEFT", 5, -40 + y);
 		DF.showRIO:SetSize(20, 20);
 		DF.showRIO:SetScript("OnClick", function(self)
 			local isChecked = self:GetChecked();
@@ -357,13 +479,16 @@ function init(self, event, arg1)
 			end
 			LFGListSearchPanel_UpdateResults(LFGListFrame.SearchPanel);
 		end);
+        DF.showRIO.tooltipText = "Show Raider.IO rating";
+        DF.showRIO:SetScript("OnEnter", OnEnter);
+        DF.showRIO:SetScript("OnLeave", OnLeave);
 		
 		local showRIOCheckedFromDB = LFGFilterSettings["showRIOChecked"] or false;
 		LFGListFrame.SearchPanel.showRIO = showRIOCheckedFromDB;
 		DF.showRIO:SetChecked(showRIOCheckedFromDB);
 
 		DF.showClass = CreateFrame("CheckButton", nil, DF, "UICheckButtonTemplate");
-		DF.showClass:SetPoint("LEFT", DF, "LEFT", 30, -40);
+		DF.showClass:SetPoint("LEFT", DF, "LEFT", 25, -40 + y);
 		DF.showClass:SetSize(20, 20);
 		DF.showClass:SetScript("OnClick", function(self)
 			local isChecked = self:GetChecked();
@@ -374,9 +499,12 @@ function init(self, event, arg1)
 		local showClassCheckedFromDB = LFGFilterSettings["showClassChecked"] or false;
 		LFGListFrame.SearchPanel.showClass = showClassCheckedFromDB;
 		DF.showClass:SetChecked(showClassCheckedFromDB);
+        DF.showClass.tooltipText = "Show classes";
+        DF.showClass:SetScript("OnEnter", OnEnter);
+        DF.showClass:SetScript("OnLeave", OnLeave);
 
 		DF.removeSelfRole = CreateFrame("CheckButton", nil, DF, "UICheckButtonTemplate");
-		DF.removeSelfRole:SetPoint("LEFT", DF, "LEFT", 50, -40);
+		DF.removeSelfRole:SetPoint("LEFT", DF, "LEFT", 45, -40 + y);
 		DF.removeSelfRole:SetSize(20, 20);
 		DF.removeSelfRole:SetScript("OnClick", function(self)
 			local isChecked = self:GetChecked();
@@ -387,9 +515,12 @@ function init(self, event, arg1)
 		local removeSelfRoleCheckedFromDB = LFGFilterSettings["removeSelfRoleChecked"] or false;
 		LFGListFrame.SearchPanel.removeSelfRole = removeSelfRoleCheckedFromDB;
 		DF.removeSelfRole:SetChecked(removeSelfRoleCheckedFromDB);
+        DF.removeSelfRole.tooltipText = "Hide parties without slot for your role";
+        DF.removeSelfRole:SetScript("OnEnter", OnEnter);
+        DF.removeSelfRole:SetScript("OnLeave", OnLeave);
 
 		DF.showPreviousRIO = CreateFrame("CheckButton", nil, DF, "UICheckButtonTemplate");
-		DF.showPreviousRIO:SetPoint("LEFT", DF, "LEFT", 70, -40);
+		DF.showPreviousRIO:SetPoint("LEFT", DF, "LEFT", 65, -40 + y);
 		DF.showPreviousRIO:SetSize(20, 20);
 		DF.showPreviousRIO:SetScript("OnClick", function(self)
 			local isChecked = self:GetChecked();
@@ -400,7 +531,26 @@ function init(self, event, arg1)
 		local showPreviousRIOCheckedFromDB = LFGFilterSettings["showPreviousRIOChecked"] or false;
 		LFGListFrame.SearchPanel.showPreviousRIO = showPreviousRIOCheckedFromDB;
 		DF.showPreviousRIO:SetChecked(showPreviousRIOCheckedFromDB);
-		
+        DF.showPreviousRIO.tooltipText = "Show previous season RIO rating";
+        DF.showPreviousRIO:SetScript("OnEnter", OnEnter);
+        DF.showPreviousRIO:SetScript("OnLeave", OnLeave);
+
+		DF.disabled = CreateFrame("CheckButton", nil, DF, "UICheckButtonTemplate");
+		DF.disabled:SetPoint("LEFT", DF, "LEFT", 85, -40 + y);
+		DF.disabled:SetSize(20, 20);
+		DF.disabled:SetScript("OnClick", function(self)
+			local isChecked = self:GetChecked();
+			LFGFilterSettings["disabled"] = isChecked;
+			LFGListFrame.SearchPanel.disabled = isChecked;
+			LFGListSearchPanel_UpdateResults(LFGListFrame.SearchPanel);
+		end);
+		local disabledCheckedFromDB = LFGFilterSettings["disabled"] or false;
+		LFGListFrame.SearchPanel.disabled = disabledCheckedFromDB;
+		DF.disabled:SetChecked(disabledCheckedFromDB);
+        DF.disabled.tooltipText = "Disable filtering temporarily";
+        DF.disabled:SetScript("OnEnter", OnEnter);
+        DF.disabled:SetScript("OnLeave", OnLeave);
+
 		SLASH_DF1 = "/df";
 		SlashCmdList["DF"] = function()
 			if DF:IsShown() then
@@ -420,6 +570,7 @@ end
 
 function hook_LFGListSearchEntry_Update(entry, ...)	
 	if( not LFGListFrame.SearchPanel:IsShown() ) then return; end
+    if( LFGListFrame.SearchPanel.disabled ) then return; end
 
     local categoryID = LFGListFrame.SearchPanel.categoryID;
     local resultID = entry.resultID;
@@ -491,6 +642,7 @@ end
 
 function hook_LFGListApplicationViewer_UpdateApplicantMember(member, appID, memberIdx, ...)
     if( RaiderIO == nil ) then return; end
+    if( LFGListFrame.SearchPanel.disabled ) then return; end
     
     local textName = member.Name:GetText();
     local name, class = C_LFGList.GetApplicantMemberInfo(appID, memberIdx);
@@ -519,6 +671,8 @@ function hook_LFGListApplicationViewer_UpdateApplicantMember(member, appID, memb
 end
 
 function hook_LFGListUtil_SortSearchResults(results)    
+    if( LFGListFrame.SearchPanel.disabled ) then return; end
+
     local sortMethod = 3;
     local removeRole = LFGListFrame.SearchPanel.removeSelfRole;
     local minRio = LFGListFrame.SearchPanel.minRio or -1;
@@ -546,6 +700,8 @@ function hook_LFGListUtil_SortSearchResults(results)
 		local includeTankCount = LFGListFrame.SearchPanel.includeTankCount;
 		local includeHealerCount = LFGListFrame.SearchPanel.includeHealerCount;
 		local includeDamagerCount = LFGListFrame.SearchPanel.includeDamagerCount;
+        local includeDungeons = LFGListFrame.SearchPanel.includeDungeons;
+        local includeDungeonCount = LFGListFrame.SearchPanel.includeDungeonCount;
 		local removedByFilter = false;
         
         if (searchResultInfo == nil) then
@@ -594,6 +750,38 @@ function hook_LFGListUtil_SortSearchResults(results)
 		if (includeDamagerCount > 0 and members["DAMAGER"] < includeDamagerCount) then
 			removedByFilter = true;
 		end
+
+        local title = searchResultInfo.name;
+        local activityID = searchResultInfo.activityID;
+        local categoryID = select(3, C_LFGList.GetActivityInfo(activityID))
+        -- 2: Dungeon
+        if (categoryID == 2 and includeDungeonCount > 0) then
+            local removeDungeon = true;
+            -- name & comment are protected by blizzard now
+            --[[
+            --]]
+            for k,v in pairs(includeDungeons) do
+                for _,q in pairs(dungeonPatterns[k]) do
+                    if string.match(title, q) then
+                        removeDungeon = false;
+                        break
+                    end
+                end
+            end
+            --[[
+            --]]
+            for k,v in pairs(includeDungeons) do
+                for _,id in pairs(dungeonIDs[k]) do
+                    if (id == activityID) then
+                        removeDungeon = false;
+                        break
+                    end
+                end
+            end
+            if (removeDungeon == true) then
+                removedByFilter = true;
+            end
+        end
 
 		if (removedByFilter == true) then 
 			addFilteredId(LFGListFrame.SearchPanel, searchResultID);
@@ -660,6 +848,8 @@ function hook_LFGListUtil_SortSearchResults(results)
 end
 
 function hook_LFGListUtil_SortApplicants(applicants)    
+    if( LFGListFrame.SearchPanel.disabled ) then return; end
+
     local sortMethod = 3;
     local minRio = -1;
     local maxRio = 9999;
