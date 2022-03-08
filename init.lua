@@ -19,6 +19,9 @@ local L = {
     ["NW"] = "죽음의 상흔",
     ["MOTS"] = "티르너 사이드의 안개",
     ["SD"] = "핏빛 심연",
+    ["TVM"] = "미지의 시장 타자베쉬",
+    ["TSW"] = "타자베쉬: 경이의 거리",
+    ["TSG"] = "타자베쉬: 소레아의 승부수",
 };
 local L2 = {
     ["TOP"] = "고투",
@@ -29,6 +32,9 @@ local L2 = {
     ["NW"] = "죽상",
     ["MOTS"] = "안개",
     ["SD"] = "심연",
+    ["TVM"] = "타자",
+    ["TSW"] = "거리",
+    ["TSG"] = "승부",
 };
 local dungeonPatterns = {
     ["TOP"] = {"고통", "투기", "고투"},
@@ -39,16 +45,22 @@ local dungeonPatterns = {
     ["NW"] = {"상흔", "죽상"},
     ["MOTS"] = {"티르", "안개"},
     ["SD"] = {"핏빛", "심연"},
+    ["TVM"] = {"타자", "시장"},
+    ["TSW"] = {"타자", "거리"},
+    ["TSG"] = {"타자", "승부", "소레"},
 };
 local dungeonIDs = {
-    ["TOP"] = {716, 719, 718, 717},  -- Theater of Pain
-    ["HOA"] = {696, 697, 698, 699},  -- Halls of Atonement
-    ["SOA"] = {708, 711, 710, 709},  -- Spires of Ascension
+    ["TOP"] = {716, 719, 718, 717}, -- Theater of Pain
+    ["HOA"] = {696, 697, 698, 699}, -- Halls of Atonement
+    ["SOA"] = {708, 711, 710, 709}, -- Spires of Ascension
     ["PF"] = {688, 689, 690, 691},  -- Plaguefall
-    ["DOS"] = {692, 693, 694, 695},  -- De Other Side
+    ["DOS"] = {692, 693, 694, 695}, -- De Other Side
     ["NW"] = {712, 715, 714, 713},  -- The Necrotic Wake
-    ["MOTS"] = {700, 701, 702, 703},  -- Mists of Tirna Scithe
+    ["MOTS"] = {700, 701, 702, 703},-- Mists of Tirna Scithe
     ["SD"] = {704, 707, 706, 705},  -- Sanguine Depths
+    ["TVM"] = {746},                -- Tazavesh, the Veiled Market
+    ["TSW"] = {1018, 1016},         -- Tazavesh: Streets of Wonder
+    ["TSG"] = {1019, 1017},         -- Tazavesh: So'Leah's Gambit
 };
 
 for i = 1, NUM_CHAT_WINDOWS do
@@ -327,7 +339,7 @@ function init(self, event, arg1)
 		
 		local DF = CreateFrame("Frame", "DF_Frame", LFGListFrame.SearchPanel, "InsetFrameTemplate3");
 		
-		DF:SetSize(160, 120 + 50);
+		DF:SetSize(160 + 40, 120 + 50);
 		--DF:SetPoint("BOTTOMRIGHT", LFGListFrame.SearchPanel, "BOTTOMRIGHT", 0, -130 - 80);
 		DF:SetPoint("BOTTOMLEFT", LFGListFrame.SearchPanel, "BOTTOMRIGHT", 2, 0);
 		DF:SetMovable(true);
@@ -357,6 +369,8 @@ function init(self, event, arg1)
             ["NW"] = 0,
             ["MOTS"] = 0,
             ["SD"] = 0,
+            ["TSW"] = 0,
+            ["TSG"] = 0,
         };
 		
 		LFGListFrame.SearchPanel.filterTankCount = 0
@@ -377,26 +391,39 @@ function init(self, event, arg1)
 		DF.applyBtn:SetNormalFontObject("GameFontNormalSmall");
 		DF.applyBtn:SetHighlightFontObject("GameFontHighlightSmall");	
 
-        DF.dungeonTOPBtn = CreateButton(DF, "Dungeon", L2["TOP"], "TOP", "DungeonTOPButton", 1, 35 + dy);
+        DF.dungeonTOPBtn = CreateButton(DF, "Dungeon", L2["TOP"], "TOP", "DungeonTOPButton", 0, 35 + dy);
         DF.dungeonHOABtn = CreateButton(DF, "Dungeon", L2["HOA"], "HOA", "DungeonHOAButton", 40, 35 + dy);
         DF.dungeonSOABtn = CreateButton(DF, "Dungeon", L2["SOA"], "SOA", "DungeonSOAButton", 80, 35 + dy);
-        DF.dungeonPFBtn = CreateButton(DF, "Dungeon", L2["PF"], "PF", "DungeonPFButton", 119, 35 + dy);
-        DF.dungeonDOSBtn = CreateButton(DF, "Dungeon", L2["DOS"], "DOS", "DungeonDOSButton", 1, 10 + dy);
+        DF.dungeonPFBtn = CreateButton(DF, "Dungeon", L2["PF"], "PF", "DungeonPFButton", 120, 35 + dy);
+        DF.dungeonPFBtn = CreateButton(DF, "Dungeon", L2["TSW"], "TSW", "DungeonTSWButton", 160, 35 + dy);
+        DF.dungeonDOSBtn = CreateButton(DF, "Dungeon", L2["DOS"], "DOS", "DungeonDOSButton", 0, 10 + dy);
         DF.dungeonNWBtn = CreateButton(DF, "Dungeon", L2["NW"], "NW", "DungeonNWButton", 40, 10 + dy);
         DF.dungeonMOTSBtn = CreateButton(DF, "Dungeon", L2["MOTS"], "MOTS", "DungeonMOTSButton", 80, 10 + dy);
-        DF.dungeonSDBtn = CreateButton(DF, "Dungeon", L2["SD"], "SD", "DungeonSDButton", 119, 10 + dy);
+        DF.dungeonSDBtn = CreateButton(DF, "Dungeon", L2["SD"], "SD", "DungeonSDButton", 120, 10 + dy);
+        DF.dungeonSDBtn = CreateButton(DF, "Dungeon", L2["TSG"], "TSG", "DungeonTSGButton", 160, 10 + dy);
 
-		DF.tankFilterBtn = CreateButton(DF, "Filter", "T", "TANK", "TankFilterButton", 10, 35 + y);
-		DF.healerFilterBtn = CreateButton(DF, "Filter", "H", "HEALER", "HealerFilterButton",  40, 35 + y);
-		DF.damager1FilterBtn = CreateButton(DF, "Filter", "D", "DAMAGER", "Damager1FilterButton", 70, 35 + y);
-		DF.damager2FilterBtn = CreateButton(DF, "Filter", "D", "DAMAGER", "Damager2FilterButton", 100, 35 + y);
-		DF.damager3FilterBtn = CreateButton(DF, "Filter", "D", "DAMAGER", "Damager3FilterButton", 130, 35 + y);
+        local x = 40
+		DF.filterLabel = DF:CreateFontString(nil , "BORDER", "GameFontNormal");
+		DF.filterLabel:SetJustifyH("CENTER");
+		DF.filterLabel:SetPoint("LEFT", DF, "LEFT", 10, 35 + y);
+		DF.filterLabel:SetText("Filter:");
 
-		DF.tankIncludeBtn = CreateButton(DF, "Include", "T", "TANK", "TankIncludeButton", 10, 10 + y);
-		DF.healerIncludeBtn = CreateButton(DF, "Include", "H", "HEALER", "HealerIncludeButton", 40, 10 + y);
-		DF.damager1IncludeBtn = CreateButton(DF, "Include", "D", "DAMAGER", "Damager1IncludeButton", 70, 10 + y);
-		DF.damager2IncludeBtn = CreateButton(DF, "Include", "D", "DAMAGER", "Damager2IncludeButton", 100, 10 + y);
-		DF.damager3IncludeBtn = CreateButton(DF, "Include", "D", "DAMAGER", "Damager3IncludeButton", 130, 10 + y);
+		DF.tankFilterBtn = CreateButton(DF, "Filter", "T", "TANK", "TankFilterButton", x + 10, 35 + y);
+		DF.healerFilterBtn = CreateButton(DF, "Filter", "H", "HEALER", "HealerFilterButton",  x + 40, 35 + y);
+		DF.damager1FilterBtn = CreateButton(DF, "Filter", "D", "DAMAGER", "Damager1FilterButton", x + 70, 35 + y);
+		DF.damager2FilterBtn = CreateButton(DF, "Filter", "D", "DAMAGER", "Damager2FilterButton", x + 100, 35 + y);
+		DF.damager3FilterBtn = CreateButton(DF, "Filter", "D", "DAMAGER", "Damager3FilterButton", x + 130, 35 + y);
+
+		DF.includeLabel = DF:CreateFontString(nil , "BORDER", "GameFontNormal");
+		DF.includeLabel:SetJustifyH("CENTER");
+		DF.includeLabel:SetPoint("LEFT", DF, "LEFT", 10, 10 + y);
+		DF.includeLabel:SetText("Incl.:");
+
+		DF.tankIncludeBtn = CreateButton(DF, "Include", "T", "TANK", "TankIncludeButton", x + 10, 10 + y);
+		DF.healerIncludeBtn = CreateButton(DF, "Include", "H", "HEALER", "HealerIncludeButton", x + 40, 10 + y);
+		DF.damager1IncludeBtn = CreateButton(DF, "Include", "D", "DAMAGER", "Damager1IncludeButton", x + 70, 10 + y);
+		DF.damager2IncludeBtn = CreateButton(DF, "Include", "D", "DAMAGER", "Damager2IncludeButton", x + 100, 10 + y);
+		DF.damager3IncludeBtn = CreateButton(DF, "Include", "D", "DAMAGER", "Damager3IncludeButton", x + 130, 10 + y);
 
 		local function OnClickApply(self)
 			DF.maxRioEdit:ClearFocus();
@@ -419,15 +446,15 @@ function init(self, event, arg1)
 
 		DF.applyBtn:SetScript("OnClick", OnClickApply);	
 		
-		DF.Label = DF:CreateFontString(nil , "BORDER", "GameFontNormal");
-		DF.Label:SetJustifyH("CENTER");
-		DF.Label:SetPoint("LEFT", DF, "LEFT", 10, -15 + y);
-		DF.Label:SetText("RIO");
-		
+		DF.rioLabel = DF:CreateFontString(nil , "BORDER", "GameFontNormal");
+		DF.rioLabel:SetJustifyH("CENTER");
+		DF.rioLabel:SetPoint("LEFT", DF, "LEFT", 10, -15 + y);
+		DF.rioLabel:SetText("R.IO:");
+
 		DF.minRioEdit = CreateFrame("EditBox", nil, DF, "InputBoxInstructionsTemplate");
 		DF.minRioEdit:SetAutoFocus(false);
-		DF.minRioEdit:SetPoint("LEFT", DF, "LEFT", 40, -15 + y);
-		DF.minRioEdit:SetSize(50, 20);
+		DF.minRioEdit:SetPoint("LEFT", DF, "LEFT", x + 15, -15 + y);
+		DF.minRioEdit:SetSize(60, 20);
         DF.minRioEdit.tooltipText = "Filter by Raider.IO rating";
         DF.minRioEdit:SetScript("OnEnter", OnEnter);
         DF.minRioEdit:SetScript("OnLeave", OnLeave);
@@ -447,8 +474,8 @@ function init(self, event, arg1)
 		
 		DF.maxRioEdit = CreateFrame("EditBox", nil, DF, "InputBoxInstructionsTemplate");
 		DF.maxRioEdit:SetAutoFocus(false);
-		DF.maxRioEdit:SetPoint("LEFT", DF, "LEFT", 100, -15 + y);
-		DF.maxRioEdit:SetSize(50, 20);
+		DF.maxRioEdit:SetPoint("LEFT", DF, "LEFT", x + 90, -15 + y);
+		DF.maxRioEdit:SetSize(60, 20);
         DF.maxRioEdit.tooltipText = "Filter by Raider.IO rating";
         DF.maxRioEdit:SetScript("OnEnter", OnEnter);
         DF.maxRioEdit:SetScript("OnLeave", OnLeave);
@@ -465,9 +492,14 @@ function init(self, event, arg1)
 			LFGListFrame.SearchPanel.maxRio = self:GetNumber();
 			LFGFilterSettings["maxRioEdit"] = self:GetNumber();
 		end);		
-		
+
+		DF.optionLabel = DF:CreateFontString(nil , "BORDER", "GameFontNormal");
+		DF.optionLabel:SetJustifyH("CENTER");
+		DF.optionLabel:SetPoint("LEFT", DF, "LEFT", 10, -40 + y);
+		DF.optionLabel:SetText("Opt.:");
+
 		DF.showRIO = CreateFrame("CheckButton", nil, DF, "UICheckButtonTemplate");
-		DF.showRIO:SetPoint("LEFT", DF, "LEFT", 5, -40 + y);
+		DF.showRIO:SetPoint("LEFT", DF, "LEFT", x + 5, -40 + y);
 		DF.showRIO:SetSize(20, 20);
 		DF.showRIO:SetScript("OnClick", function(self)
 			local isChecked = self:GetChecked();
@@ -488,7 +520,7 @@ function init(self, event, arg1)
 		DF.showRIO:SetChecked(showRIOCheckedFromDB);
 
 		DF.showClass = CreateFrame("CheckButton", nil, DF, "UICheckButtonTemplate");
-		DF.showClass:SetPoint("LEFT", DF, "LEFT", 25, -40 + y);
+		DF.showClass:SetPoint("LEFT", DF, "LEFT", x + 25, -40 + y);
 		DF.showClass:SetSize(20, 20);
 		DF.showClass:SetScript("OnClick", function(self)
 			local isChecked = self:GetChecked();
@@ -504,7 +536,7 @@ function init(self, event, arg1)
         DF.showClass:SetScript("OnLeave", OnLeave);
 
 		DF.removeSelfRole = CreateFrame("CheckButton", nil, DF, "UICheckButtonTemplate");
-		DF.removeSelfRole:SetPoint("LEFT", DF, "LEFT", 45, -40 + y);
+		DF.removeSelfRole:SetPoint("LEFT", DF, "LEFT", x + 45, -40 + y);
 		DF.removeSelfRole:SetSize(20, 20);
 		DF.removeSelfRole:SetScript("OnClick", function(self)
 			local isChecked = self:GetChecked();
@@ -520,7 +552,7 @@ function init(self, event, arg1)
         DF.removeSelfRole:SetScript("OnLeave", OnLeave);
 
 		DF.showPreviousRIO = CreateFrame("CheckButton", nil, DF, "UICheckButtonTemplate");
-		DF.showPreviousRIO:SetPoint("LEFT", DF, "LEFT", 65, -40 + y);
+		DF.showPreviousRIO:SetPoint("LEFT", DF, "LEFT", x + 65, -40 + y);
 		DF.showPreviousRIO:SetSize(20, 20);
 		DF.showPreviousRIO:SetScript("OnClick", function(self)
 			local isChecked = self:GetChecked();
@@ -536,7 +568,7 @@ function init(self, event, arg1)
         DF.showPreviousRIO:SetScript("OnLeave", OnLeave);
 
 		DF.disabled = CreateFrame("CheckButton", nil, DF, "UICheckButtonTemplate");
-		DF.disabled:SetPoint("LEFT", DF, "LEFT", 85, -40 + y);
+		DF.disabled:SetPoint("LEFT", DF, "LEFT", x + 85, -40 + y);
 		DF.disabled:SetSize(20, 20);
 		DF.disabled:SetScript("OnClick", function(self)
 			local isChecked = self:GetChecked();
