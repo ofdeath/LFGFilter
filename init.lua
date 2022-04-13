@@ -30,7 +30,7 @@ local L2 = {
     ["PF"] = "역병",
     ["DOS"] = "저편",
     ["NW"] = "죽상",
-    ["MOTS"] = "안개",
+    ["MOTS"] = "티르",
     ["SD"] = "심연",
     ["TVM"] = "타자",
     ["TSW"] = "거리",
@@ -591,7 +591,7 @@ function init(self, event, arg1)
 				DF:Show()
 			end
 		end
-		
+
 		hooksecurefunc("LFGListSearchEntry_Update", hook_LFGListSearchEntry_Update);
 		hooksecurefunc("LFGListApplicationViewer_UpdateApplicantMember", hook_LFGListApplicationViewer_UpdateApplicantMember);
 		hooksecurefunc("LFGListUtil_SortSearchResults", hook_LFGListUtil_SortSearchResults);	
