@@ -22,6 +22,15 @@ local L = {
     ["TVM"] = "미지의 시장 타자베쉬",
     ["TSW"] = "타자베쉬: 경이의 거리",
     ["TSG"] = "타자베쉬: 소레아의 승부수",
+    -- Season 4
+    ["OM"] = "작전명 메카곤",
+    ["MJ"] = "메카곤: 고철장",
+    ["MW"] = "메카곤: 작업장",
+    ["RTK"] = "다시 찾은 카라잔",
+    ["LK"] = "카라잔: 하층",
+    ["UK"] = "카라잔: 상층",
+    ["ID"] = "강철 선착장",
+    ["GD"] = "파멸철로 정비소",
 };
 local L2 = {
     ["TOP"] = "고투",
@@ -35,6 +44,15 @@ local L2 = {
     ["TVM"] = "타자",
     ["TSW"] = "거리",
     ["TSG"] = "승부",
+    -- Season 4
+    ["OM"] = "메카",
+    ["MJ"] = "고철",
+    ["MW"] = "작업",
+    ["RTK"] = "카라",
+    ["LK"] = "하층",
+    ["UK"] = "상층",
+    ["ID"] = "강철",
+    ["GD"] = "파멸",
 };
 local dungeonPatterns = {
     ["TOP"] = {"고통", "투기", "고투"},
@@ -48,7 +66,18 @@ local dungeonPatterns = {
     ["TVM"] = {"타자", "시장"},
     ["TSW"] = {"타자", "거리"},
     ["TSG"] = {"타자", "승부", "소레"},
+    -- Season 4
+    ["OM"] = {"메카", "작전"},
+    ["MJ"] = {"메카", "고철"},
+    ["MW"] = {"메카", "작업"},
+    ["RTK"] = {"카라", "다시"},
+    ["LK"] = {"카라", "하층"},
+    ["UK"] = {"카라", "상층"},
+    ["ID"] = {"강철", "선착"},
+    ["GD"] = {"파멸", "정비"},
 };
+
+-- https://wow.tools/dbc/?dbc=groupfinderactivity&build=10.0.0.45141#page=1&search=Theater
 local dungeonIDs = {
     ["TOP"] = {716, 719, 718, 717}, -- Theater of Pain
     ["HOA"] = {696, 697, 698, 699}, -- Halls of Atonement
@@ -61,6 +90,15 @@ local dungeonIDs = {
     ["TVM"] = {746},                -- Tazavesh, the Veiled Market
     ["TSW"] = {1018, 1016},         -- Tazavesh: Streets of Wonder
     ["TSG"] = {1019, 1017},         -- Tazavesh: So'Leah's Gambit
+    -- Season 4
+    ["OM"] = {669},                 -- Operation: Mechagon
+    ["MJ"] = {679, 682},            -- Mechagon Junkyard
+    ["MW"] = {683, 684},            -- Mechagon Workshop
+    ["RTK"] = {455},                -- Return to Karazhan
+    ["LK"] = {470, 471},            -- Lower Karazhan
+    ["UK"] = {472, 473},            -- Upper Karazhan
+    ["ID"] = {22, 30, 180, 402},    -- Iron Docks
+    ["GD"] = {25, 33, 183, 405},    -- Grimrail Depot
 };
 
 for i = 1, NUM_CHAT_WINDOWS do
@@ -361,6 +399,7 @@ function init(self, event, arg1)
         };
 
         LFGListFrame.SearchPanel.dungeon = {
+            --[[
             ["TOP"] = 0,
             ["HOA"] = 0,
             ["SOA"] = 0,
@@ -369,8 +408,16 @@ function init(self, event, arg1)
             ["NW"] = 0,
             ["MOTS"] = 0,
             ["SD"] = 0,
+            --]]
             ["TSW"] = 0,
             ["TSG"] = 0,
+            -- Seanson 4
+            ["MJ"] = 0,
+            ["MW"] = 0,
+            ["LK"] = 0,
+            ["UK"] = 0,
+            ["ID"] = 0,
+            ["GD"] = 0,
         };
 
         LFGListFrame.SearchPanel.filterTankCount = 0
@@ -391,16 +438,27 @@ function init(self, event, arg1)
         DF.applyBtn:SetNormalFontObject("GameFontNormalSmall");
         DF.applyBtn:SetHighlightFontObject("GameFontHighlightSmall");
 
+        --[[
         DF.dungeonTOPBtn = CreateButton(DF, "Dungeon", L2["TOP"], "TOP", "DungeonTOPButton", 0, 35 + dy);
         DF.dungeonHOABtn = CreateButton(DF, "Dungeon", L2["HOA"], "HOA", "DungeonHOAButton", 40, 35 + dy);
         DF.dungeonSOABtn = CreateButton(DF, "Dungeon", L2["SOA"], "SOA", "DungeonSOAButton", 80, 35 + dy);
         DF.dungeonPFBtn = CreateButton(DF, "Dungeon", L2["PF"], "PF", "DungeonPFButton", 120, 35 + dy);
-        DF.dungeonPFBtn = CreateButton(DF, "Dungeon", L2["TSW"], "TSW", "DungeonTSWButton", 160, 35 + dy);
+        DF.dungeonTSWBtn = CreateButton(DF, "Dungeon", L2["TSW"], "TSW", "DungeonTSWButton", 160, 35 + dy);
         DF.dungeonDOSBtn = CreateButton(DF, "Dungeon", L2["DOS"], "DOS", "DungeonDOSButton", 0, 10 + dy);
         DF.dungeonNWBtn = CreateButton(DF, "Dungeon", L2["NW"], "NW", "DungeonNWButton", 40, 10 + dy);
         DF.dungeonMOTSBtn = CreateButton(DF, "Dungeon", L2["MOTS"], "MOTS", "DungeonMOTSButton", 80, 10 + dy);
         DF.dungeonSDBtn = CreateButton(DF, "Dungeon", L2["SD"], "SD", "DungeonSDButton", 120, 10 + dy);
-        DF.dungeonSDBtn = CreateButton(DF, "Dungeon", L2["TSG"], "TSG", "DungeonTSGButton", 160, 10 + dy);
+        DF.dungeonTSGBtn = CreateButton(DF, "Dungeon", L2["TSG"], "TSG", "DungeonTSGButton", 160, 10 + dy);
+        --]]
+        -- Season 4
+        DF.dungeonIDBtn = CreateButton(DF, "Dungeon", L2["ID"], "ID", "DungeonIDButton", 5, 35 + dy);
+        DF.dungeonGDBtn = CreateButton(DF, "Dungeon", L2["GD"], "GD", "DungeonGDButton", 5, 10 + dy);
+        DF.dungeonLKBtn = CreateButton(DF, "Dungeon", L2["LK"], "LK", "DungeonLKButton", 55, 35 + dy);
+        DF.dungeonUKBtn = CreateButton(DF, "Dungeon", L2["UK"], "UK", "DungeonUKButton", 55, 10 + dy);
+        DF.dungeonMJBtn = CreateButton(DF, "Dungeon", L2["MJ"], "MJ", "DungeonMJButton", 105, 35 + dy);
+        DF.dungeonMWBtn = CreateButton(DF, "Dungeon", L2["MW"], "MW", "DungeonMWButton", 105, 10 + dy);
+        DF.dungeonTSWBtn = CreateButton(DF, "Dungeon", L2["TSW"], "TSW", "DungeonTSWButton", 155, 35 + dy);
+        DF.dungeonTSGBtn = CreateButton(DF, "Dungeon", L2["TSG"], "TSG", "DungeonTSGButton", 155, 10 + dy);
 
         local x = 40
         DF.filterLabel = DF:CreateFontString(nil , "BORDER", "GameFontNormal");
