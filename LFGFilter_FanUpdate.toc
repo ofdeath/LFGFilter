@@ -7,4 +7,5 @@
 ## SavedVariables: LFGFilterSettingsGlobal
 ## SavedVariablesPerCharacter: LFGFilterSettings
 
+FixGetPlaystyleString.lua
 init.lua
